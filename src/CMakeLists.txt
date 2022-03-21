@@ -8,3 +8,4 @@ get_srcs("${CMAKE_CURRENT_SOURCE_DIR}" SRCS)
 
 add_executable(${TARGET} ${SRCS})
 set_compile_options(${TARGET})
+run_code_format(${TARGET})
