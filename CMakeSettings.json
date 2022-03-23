@@ -14,14 +14,14 @@
         },
         {
             "name": "x64-RelWithDebInfo",
-            "generator": "Visual Studio 16 2019 Win64",
+            "generator": "Ninja",
             "configurationType": "RelWithDebInfo",
             "inheritEnvironments": ["msvc_x64"],
             "buildRoot": "${env.BuildDir}\\${name}"
         },
         {
             "name": "x64-Release",
-            "generator": "Visual Studio 16 2019 Win64",
+            "generator": "Ninja",
             "configurationType": "Release",
             "inheritEnvironments": ["msvc_x64"],
             "buildRoot": "${env.BuildDir}\\${name}"
