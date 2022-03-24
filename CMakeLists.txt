@@ -7,5 +7,7 @@ include(CMakeHelpers)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 configure_msvc_runtime()
+add_custom_target(prebuild_scripts)
+run_code_format(prebuild_scripts)
 
 add_subdirectory(src)
