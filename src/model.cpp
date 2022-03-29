@@ -26,7 +26,7 @@ bool Model::Load(const char* filename)
         char trash;
         if (line.compare(0, 2, "v ") == 0) {
             iss >> trash;
-            Vec3 v;
+            Vec3f v;
             iss >> v.x;
             iss >> v.y;
             iss >> v.z;

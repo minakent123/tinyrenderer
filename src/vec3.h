@@ -2,21 +2,22 @@
 
 #include <cmath>
 
+template<typename T>
 struct Vec3 final
 {
     Vec3()
-        : x(0.0f)
-        , y(0.0f)
-        , z(0.0f)
+        : x(0)
+        , y(0)
+        , z(0)
     {}
 
-    explicit Vec3(float a)
+    explicit Vec3(T a)
         : x(a)
         , y(a)
         , z(a)
     {}
 
-    Vec3(float nx, float ny, float nz)
+    Vec3(T nx, T ny, T nz)
         : x(nx)
         , y(ny)
         , z(nz)
@@ -73,13 +74,13 @@ struct Vec3 final
 
     Vec3 operator*(float f) const
     {
-        return Vec3(x * f, y * f, z * f);
+        return Vec3(static_cast<T>(x * f), static_cast<T>(y * f), static_cast<T>(z * f));
     }
 
     Vec3 operator/(float f) const
     {
         f = 1.0f / f;
-        return Vec3(x * f, y * f, z * f);
+        return Vec3(static_cast<T>(x * f), static_cast<T>(y * f), static_cast<T>(z * f));
     }
 
     Vec3& operator+=(const Vec3& v)
@@ -115,7 +116,7 @@ struct Vec3 final
         return *this;
     }
 
-    float Dot(const Vec3& v) const
+    T Dot(const Vec3& v) const
     {
         return x * v.x + y * v.y + z * v.z;
     }
@@ -143,7 +144,10 @@ struct Vec3 final
         return Vec3(std::abs(x), std::abs(y), std::abs(z));
     }
 
-    float x;
-    float y;
-    float z;
+    T x;
+    T y;
+    T z;
 };
+
+using Vec3f = Vec3<float>;
+using Vec3i = Vec3<int32_t>;
