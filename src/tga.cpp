@@ -5,11 +5,11 @@
 TGAImage::TGAImage()
 {}
 
-TGAImage::TGAImage(uint32_t w, uint32_t h, uint8_t bpp)
+TGAImage::TGAImage(uint32_t w, uint32_t h, TGAFormat format)
 {
     m_width = w;
     m_height = h;
-    m_bytesPP = bpp;
+    m_bytesPP = static_cast<uint8_t>(format);
     uint32_t nbytes = m_width * m_height * m_bytesPP;
     m_data = new uint8_t[nbytes];
     memset(m_data, 0, nbytes);

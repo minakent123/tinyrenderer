@@ -88,7 +88,7 @@ class TGAImage final
 {
 public:
     TGAImage();
-    TGAImage(uint32_t w, uint32_t h, uint8_t bpp);
+    TGAImage(uint32_t w, uint32_t h, TGAFormat format);
     TGAImage(const TGAImage& img);
     ~TGAImage();
 
