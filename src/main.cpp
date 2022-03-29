@@ -37,36 +37,61 @@ void DrawLine(int32_t x0, int32_t y0, int32_t x1, int32_t y1, TGAImage& image, c
     }
 }
 
-int main(int argc, char** argv)
+void DrawTraiangle(Vec3i t0, Vec3i t1, Vec3i t2, TGAImage& image, const TGAColor& color)
 {
-    if (argc != 2) {
-        ERRORF("usage: tinyrenderer path_to_obj");
-        return -1;
+    if (t0.y == t1.y && t0.y == t2.y) {
+        return;
     }
-    Model* model = new Model();
-    if (!model->Load(argv[1])) {
-        ERRORF("failed to load %s", argv[1]);
-        delete model;
-        return -1;
+    if (t0.y > t1.y) {
+        std::swap(t0, t1);
     }
-    const TGAColor color = TGAColor(255, 255, 255, 255);
-    const int32_t width = 800;
-    const int32_t height = 800;
-    TGAImage image(width, height, static_cast<uint8_t>(TGAFormat::RGB));
-    for (uint32_t i = 0; i < model->GetNumFaces(); ++i) {
-        const std::vector<uint32_t>& face = model->GetFace(i);
-        for (uint32_t j = 0; j < 3; ++j) {
-            const Vec3& v0 = model->GetVert(face[j]);
-            const Vec3& v1 = model->GetVert(face[(j + 1) % 3]);
-            int32_t x0 = static_cast<int32_t>((v0.x + 1) * width / 2);
-            int32_t y0 = static_cast<int32_t>((v0.y + 1) * height / 2);
-            int32_t x1 = static_cast<int32_t>((v1.x + 1) * width / 2);
-            int32_t y1 = static_cast<int32_t>((v1.y + 1) * height / 2);
-            DrawLine(x0, y0, x1, y1, image, color);
+    if (t0.y > t2.y) {
+        std::swap(t0, t2);
+    }
+    if (t1.y > t2.y) {
+        std::swap(t1, t2);
+    }
+    int32_t total_height = t2.y - t0.y;
+    for (int32_t i = 0; i < total_height; ++i) {
+        float alpha = static_cast<float>(i) / total_height;
+        Vec3i a = t0 + (t2 - t0) * alpha;
+        Vec3i b;
+        bool second_half = (i > t1.y - t0.y) || (t1.y == t0.y);
+        if (second_half) {
+            int32_t segment_height = t2.y - t1.y;
+            float beta = static_cast<float>(i - (t1.y - t0.y)) / segment_height;
+            b = t1 + (t2 - t1) * beta;
+        } else {
+            int32_t segment_height = t1.y - t0.y;
+            float beta = static_cast<float>(i) / segment_height;
+            b = t0 + (t1 - t0) * beta;
+        }
+        if (a.x > b.x) {
+            std::swap(a, b);
+        }
+        for (int32_t j = a.x; j < b.x; ++j) {
+            image.SetColor(j, t0.y + i, color);
         }
     }
-    image.FlipVertically();
+}
+
+int main(int argc, char** argv)
+{
+    TGAColor white = TGAColor(255, 255, 255, 255);
+    TGAColor red = TGAColor(255, 0, 0, 255);
+    TGAColor green = TGAColor(0, 255, 0, 255);
+
+    TGAImage image(800, 800, TGAFormat::RGB);
+
+    Vec3i t0[] = {Vec3i(10, 70, 0), Vec3i(50, 160, 0), Vec3i(70, 80, 0)};
+    Vec3i t1[] = {Vec3i(180, 50, 0), Vec3i(150, 1, 0), Vec3i(70, 180, 0)};
+    Vec3i t2[] = {Vec3i(180, 150, 0), Vec3i(120, 160, 0), Vec3i(130, 180, 0)};
+
+    DrawTraiangle(t0[0], t0[1], t0[2], image, red);
+    DrawTraiangle(t1[0], t1[1], t1[2], image, white);
+    DrawTraiangle(t2[0], t2[1], t2[2], image, green);
+
+    image.FlipVertically();  // i want to have the origin at the left bottom corner of the image
     image.Write("output.tga");
-    delete model;
     return 0;
 }
