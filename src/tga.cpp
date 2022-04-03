@@ -291,7 +291,7 @@ bool TGAImage::FlipHorizontally()
     return true;
 }
 
-TGAColor TGAImage::GetColor(uint32_t x, uint32_t y)
+TGAColor TGAImage::GetColor(uint32_t x, uint32_t y) const
 {
     if (m_data == nullptr || x >= m_width || y >= m_height) {
         return TGAColor();

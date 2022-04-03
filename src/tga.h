@@ -98,12 +98,14 @@ public:
     bool FlipVertically();
     bool FlipHorizontally();
     bool SetColor(uint32_t x, uint32_t y, const TGAColor& c);
+    uint32_t GetWidth() const { return m_width; }
+    uint32_t GetHeight() const { return m_height; }
 
 private:
     void ClearData();
     bool LoadRLEData(std::ifstream& ifs);
     bool UnloadRLEData(std::ofstream& ofs);
-    TGAColor GetColor(uint32_t x, uint32_t y);
+    TGAColor GetColor(uint32_t x, uint32_t y) const;
 
 private:
     uint8_t* m_data{};
