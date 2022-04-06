@@ -81,24 +81,36 @@ int main(int argc, char** argv)
         ERRORF("usage: tinyrenderer path_to_obj");
         return -1;
     }
+
     Model* model = new Model();
     if (!model->Load(argv[1])) {
         ERRORF("failed to load %s", argv[1]);
         delete model;
         return -1;
     }
+
     const int32_t width = 800;
     const int32_t height = 800;
     TGAImage image(width, height, TGAFormat::RGB);
+    Vec3f lightDir(0, 0, -1);
+
     for (uint32_t i = 0; i < model->GetNumFaces(); ++i) {
         const std::vector<uint32_t>& face = model->GetFace(i);
         Vec2i screenCoords[3];
+        Vec3f worldCoords[3];
         for (uint32_t j = 0; j < 3; ++j) {
-            const Vec3f& worldCoords = model->GetVert(face[j]);
-            screenCoords[j] = Vec2i(static_cast<int32_t>((worldCoords.x + 1) * width / 2), static_cast<int32_t>((worldCoords.y + 1) * height / 2));
+            const Vec3f& v = model->GetVert(face[j]);
+            screenCoords[j] = Vec2i(static_cast<int32_t>((v.x + 1) * width / 2), static_cast<int32_t>((v.y + 1) * height / 2));
+            worldCoords[j] = v;
         }
-        DrawTraiangle(screenCoords[0], screenCoords[1], screenCoords[2], image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255));
+        Vec3f n = (worldCoords[2] - worldCoords[0]).Cross(worldCoords[1] - worldCoords[0]);
+        n.Normalize();
+        float intensity = n.Dot(lightDir);
+        if (intensity > 0) {
+            DrawTraiangle(screenCoords[0], screenCoords[1], screenCoords[2], image, TGAColor(static_cast<uint8_t>(intensity * 255), static_cast<uint8_t>(intensity * 255), static_cast<uint8_t>(intensity * 255), 255));
+        }
     }
+
     image.FlipVertically();
     image.Write("output.tga");
     delete model;
