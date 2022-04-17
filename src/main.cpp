@@ -7,6 +7,10 @@
 #include "util.h"
 #include "vec2.h"
 
+static const int32_t WIDTH = 800;
+static const int32_t HEIGHT = 500;
+static const int32_t DEPTH = 255;
+
 void DrawLine(const Vec2i& p0, const Vec2i& p1, TGAImage& image, const TGAColor& color)
 {
     int32_t x0 = p0.x;
@@ -41,8 +45,7 @@ void DrawLine(const Vec2i& p0, const Vec2i& p1, TGAImage& image, const TGAColor&
         }
     }
 }
-
-void DrawTraiangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage& image, const TGAColor& color)
+void DrawTraiangle(Vec3i t0, Vec3i t1, Vec3i t2, int32_t* zbuffer, TGAImage& image, const TGAColor& color)
 {
     if (t0.y == t1.y && t0.y == t2.y) {
         return;
@@ -59,8 +62,8 @@ void DrawTraiangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage& image, const TGAColor
     int32_t total_height = t2.y - t0.y;
     for (int32_t i = 0; i < total_height; ++i) {
         float alpha = static_cast<float>(i) / total_height;
-        Vec2i a = t0 + (t2 - t0) * alpha;
-        Vec2i b;
+        Vec3i a = t0 + (t2 - t0) * alpha;
+        Vec3i b;
         bool second_half = (i > t1.y - t0.y) || (t1.y == t0.y);
         if (second_half) {
             int32_t segment_height = t2.y - t1.y;
@@ -75,7 +78,15 @@ void DrawTraiangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage& image, const TGAColor
             std::swap(a, b);
         }
         for (int32_t j = a.x; j < b.x; ++j) {
-            image.SetColor(j, t0.y + i, color);
+            float phi = b.x == a.x ? 1.f : (float)(j - a.x) / (float)(b.x - a.x);
+            Vec3i p = a + (b - a) * phi;
+            p.x = j;
+            p.y = t0.y + i;  // a hack to fill holes (due to int cast precision problems)
+            int32_t idx = j + (t0.y + i) * WIDTH;
+            if (zbuffer[idx] < p.z) {
+                zbuffer[idx] = p.z;
+                image.SetColor(p.x, p.y, color);
+            }
         }
     }
 }
@@ -95,45 +106,40 @@ void Rasterize(Vec2i p0, Vec2i p1, TGAImage& image, const TGAColor& color, int32
     }
 }
 
+Vec3f World2Screen(const Vec3f& v)
+{
+    return Vec3f((v.x + 1.f) * WIDTH / 2 + 0.5f, (v.y + 1.f) * HEIGHT / 2 + 0.5f, v.z);
+}
+
 int main(int argc, char** argv)
 {
-    const int32_t width = 800;
-    const int32_t height = 500;
-    const TGAColor white = TGAColor(255, 255, 255, 255);
-    const TGAColor red = TGAColor(255, 0, 0, 255);
-    const TGAColor green = TGAColor(0, 255, 0, 255);
-    const TGAColor blue = TGAColor(0, 0, 255, 255);
-
-    {
-        TGAImage scene(width, height, TGAFormat::RGB);
-
-        DrawLine(Vec2i(20, 34), Vec2i(744, 400), scene, red);
-        DrawLine(Vec2i(120, 434), Vec2i(444, 400), scene, green);
-        DrawLine(Vec2i(330, 463), Vec2i(594, 200), scene, blue);
-
-        DrawLine(Vec2i(10, 10), Vec2i(790, 10), scene, white);
-
-        scene.FlipVertically();
-        scene.Write("scene.tga");
+    Model* model = new Model();
+    model->Load("african_head.obj");
+    int32_t* zbuffer = new int32_t[WIDTH * HEIGHT];
+    for (int32_t i = 0; i < WIDTH * HEIGHT; ++i) {
+        zbuffer[i] = std::numeric_limits<int32_t>::min();
     }
-    {
-        TGAImage render(width, 16, TGAFormat::RGB);
-        int32_t ybuffer[width];
-        for (int32_t i = 0; i < width; ++i) {
-            ybuffer[i] = std::numeric_limits<int>::min();
-        }
-        Rasterize(Vec2i(20, 34), Vec2i(744, 400), render, red, ybuffer);
-        Rasterize(Vec2i(120, 434), Vec2i(444, 400), render, green, ybuffer);
-        Rasterize(Vec2i(330, 463), Vec2i(594, 200), render, blue, ybuffer);
 
-        for (int32_t i = 0; i < width; ++i) {
-            for (int32_t j = 1; j < 16; ++j) {
-                render.SetColor(i, j, render.GetColor(i, 0));
-            }
+    TGAImage image(WIDTH, HEIGHT, TGAFormat::RGB);
+    Vec3f light_dir(0, 0, -1.f);
+    for (uint32_t i = 0; i < model->GetNumFaces(); ++i) {
+        const std::vector<uint32_t>& face = model->GetFace(i);
+        Vec3i screen_coords[3];
+        Vec3f world_coords[3];
+        for (int32_t i = 0; i < 3; ++i) {
+            const Vec3f& v = model->GetVert(face[i]);
+            screen_coords[i] = Vec3i(static_cast<int32_t>((v.x + 1.f) * WIDTH / 2), static_cast<int32_t>((v.y + 1.f) * HEIGHT / 2), static_cast<int32_t>((v.z + 1.f) * DEPTH / 2));
+            world_coords[i] = v;
         }
-
-        render.FlipVertically();
-        render.Write("render.tga");
+        Vec3f n = (world_coords[2] - world_coords[0]).Cross(world_coords[1] - world_coords[0]);
+        n.Normalize();
+        float intensity = n.Dot(light_dir);
+        if (intensity > 0) {
+            DrawTraiangle(screen_coords[0], screen_coords[1], screen_coords[2], zbuffer, image, TGAColor(static_cast<uint8_t>(intensity * 255), static_cast<uint8_t>(intensity * 255), static_cast<uint8_t>(intensity * 255), 255));
+        }
     }
+    image.FlipVertically();
+    image.Write("output.tga");
+    delete model;
     return 0;
 }
